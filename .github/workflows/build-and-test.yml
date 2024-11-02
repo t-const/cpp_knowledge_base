@@ -1,0 +1,45 @@
+name: Build and Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  checks: write
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and run Devcontainer build and test
+      uses: devcontainers/ci@v0.3
+      with:
+        runCmd: |
+          mkdir -p build 
+          cd build
+          cmake ..
+          cmake --build .
+          ctest --output-junit Testing/junit.xml
+
+    - name: Test report
+      uses: mikepenz/action-junit-report@v4
+      if: success()
+      with:
+        report_paths: 'build/Testing/**/*.xml'
+        include_passed: true
+        job_summary: true
